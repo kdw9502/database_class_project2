@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <string.h>
 #include "mysql.h"
 
 #pragma comment(lib, "libmysql.lib")
@@ -12,6 +13,71 @@ MYSQL* connection = NULL;
 
 void send_query(char* query);
 void start_conversation();
+
+char* query1_1 =
+"SELECT package.customer_name, package.customer_address \
+FROM package, tracking_info \
+WHERE package.package_id = tracking_info.package_id \
+and vehicle_id = %s and arrival_time is NULL;";
+
+char* query1_2 =
+"SELECT package.recipient \
+FROM package, tracking_info \
+WHERE package.package_id = tracking_info.package_id \
+and vehicle_id = 1721 and arrival_time is NULL;";
+
+char* query1_3 =
+"WITH VICTIMS(package_id) AS ( \
+SELECT package.package_id \
+FROM package, tracking_info \
+WHERE package.package_id = tracking_info.package_id \
+and vehicle_id = 1721 and arrival_time is NULL \
+) \
+WITH LAST_DELIVERY(pacakge_id, departue_time) (select package_id, MAX(departue_time) \
+	FROM VICTIMS, tracking_info \
+where VICTIMS.package_id = tracking_info.package_id \
+and tracking_info.arrival_time IS NOT NULL \
+group by package_id) \
+SELECT LAST_DELIVERY.* \
+FROM LAST_DELIVERY;";
+
+char* query2 =
+"select customer_name, customer_address, count(*) as package_count \
+from package \
+group by customer_name, customer_address \
+order by package_count \
+limit 1;";
+
+char* query3 =
+"select customer_name, customer_address, sum(fee) as total_fee \
+from package \
+where package.registration_time > DATE_SUN(now(), INTERVAL 2 YEARS) \
+group by customer_name, customer_address \
+order by total_fee \
+limit 1; ";
+
+char* query4 =
+"SELECT package.package_id \
+FROM package, tracking_info \
+WHERE package.package_id = traking_info.package_id and \
+package.promised_time < tracking_info.arrival_time and \
+	to_warehouse IS NULL;";
+
+char* query5_1 =
+"select customer_name, customer_address, sum(fee) as total_fee \
+from package \
+group by customer_name, customer_address;";
+
+char* query5_2 =
+"select customer_name, customer_address, type, sum(fee) as total_fee \
+from package \
+group by customer_name, customer_address, type \
+order by customer_name, customer_address;";
+
+char* query5_3 =
+"select package_id, customer_name, customer_address, contents, sum(fee) as total_fee \
+from package \
+order by customer_name, customer_address;";
 
 int main(void) {
 
@@ -42,7 +108,7 @@ int main(void) {
 
 		mysql_close(connection);
 
-		printf("");
+		printf("Database Quit successfully\n");
 	}
 
 	return 0;
