@@ -22,6 +22,7 @@ void type2_conversation();
 void type3_conversation();
 void type4_conversation();
 void type5_conversation();
+void init();
 
 
 char* find_truck =
@@ -133,6 +134,34 @@ int main(void) {
 	return 0;
 }
 
+void init()
+{
+	char* buffer;
+	char* token;
+	FILE* fp = NULL;
+	int size;
+	fp = fopen("20141494.txt","r");
+	
+	fseek(fp, 0, SEEK_END);
+	size = ftell(fp);
+
+	buffer = malloc(size + 1);
+	memset(buffer, 0, size + 1);
+	fseek(fp, 0, SEEK_SET);
+	fread(buffer, size, 1, fp);
+
+
+	token = strtok(buffer,";");
+	while (token != NULL)
+	{
+		send_query(token); 
+		token = strtok(NULL,";");
+
+	}
+	
+	free(buffer);
+}
+
 MYSQL_RES* send_query(char* query)
 {
 	MYSQL_RES* sql_result = NULL;
@@ -215,7 +244,7 @@ void type1_conversation()
 
 		sql_result = send_query(buffer);
 		vehicle_id = input;
-		// Æ®·°ÀÌ ÆÄ±«µÇÁö ¾Ê¾ÒÀ¸¸é
+		// íŠ¸ëŸ­ì´ íŒŒê´´ë˜ì§€ ì•Šì•˜ìœ¼ë©´
 		if (mysql_fetch_row(sql_result) == NULL)
 		{
 			printf("Truck %d is not destroyed.\n\n", input);
