@@ -7,16 +7,17 @@
 const char* host = "localhost";
 const char* user = "root";
 const char* pw = "rkdehddnr1";
-const char* db = "project";
+const char* db = "project2";
 MYSQL conn;
 MYSQL* connection = NULL;
 
 MYSQL_RES* send_query(char* query);
 void start_conversation();
 void type1_conversation();
-void type1_1_conversation();
-void type1_2_conversation();
-void type1_3_conversation();
+void subtype1_conversation(int vehicle_id);
+void type1_1_conversation(int vehicle_id);
+void type1_2_conversation(int vehicle_id);
+void type1_3_conversation(int vehicle_id);
 void type2_conversation();
 void type3_conversation();
 void type4_conversation();
@@ -24,25 +25,25 @@ void type5_conversation();
 
 
 const char* query1_1 =
-"SELECT package.customer_name, package.customer_address \
+"SELECT distinct package.customer_name, package.customer_address \
 FROM package, tracking_info \
 WHERE package.package_id = tracking_info.package_id \
-and vehicle_id = %s and arrival_time is NULL;";
+and vehicle_id = %d and arrival_time is NULL;";
 
 const char* query1_2 =
-"SELECT package.recipient \
+"SELECT distinct package.recipient \
 FROM package, tracking_info \
 WHERE package.package_id = tracking_info.package_id \
-and vehicle_id = %s and arrival_time is NULL;";
+and vehicle_id = %d and arrival_time is NULL;";
 
 const char* query1_3 =
 "WITH VICTIMS(package_id) AS ( \
 SELECT package.package_id \
 FROM package, tracking_info \
 WHERE package.package_id = tracking_info.package_id \
-and vehicle_id = %s and arrival_time is NULL \
+and vehicle_id = %d and arrival_time is NULL \
 ) \
-select package_id, MAX(departue_time) \
+select tracking_info.package_id, MAX(departure_time) \
 	FROM VICTIMS, tracking_info \
 where VICTIMS.package_id = tracking_info.package_id \
 and tracking_info.arrival_time IS NOT NULL \
@@ -51,7 +52,7 @@ group by package_id ;";
 const char* query2 =
 "select customer_name, customer_address, count(*) as package_count \
 from package \
-where year(package.registration_time) = year(%d) \
+where year(package.registration_time) = %d \
 group by customer_name, customer_address \
 order by package_count \
 limit 1;";
@@ -59,7 +60,7 @@ limit 1;";
 const char* query3 =
 "select customer_name, customer_address, sum(fee) as total_fee \
 from package \
-where year(package.registration_time) = year(%d) \
+where year(package.registration_time) = %d \
 group by customer_name, customer_address \
 order by total_fee \
 limit 1; ";
@@ -67,30 +68,30 @@ limit 1; ";
 const char* query4 =
 "SELECT package.package_id \
 FROM package, tracking_info \
-WHERE package.package_id = traking_info.package_id and \
+WHERE package.package_id = tracking_info.package_id and \
 package.promised_time < tracking_info.arrival_time and \
 	to_warehouse IS NULL;";
 
 const char* query5_1 =
 "select customer_name, customer_address, sum(fee) as total_fee \
 from package \
-where customer_name = %s and year(package.registration_time) = %d and month(package.registration_time) = %d \
+where customer_name = \"%s\" and year(package.registration_time) = %d and month(package.registration_time) = %d \
 group by customer_name, customer_address;";
 
 const char* query5_2 =
-"select customer_name, customer_address, type, sum(fee) as total_fee \
+"select customer_name, customer_address, type_, sum(fee) as total_fee \
 from package \
-where customer_name = %s and year(package.registration_time) = %d and month(package.registration_time) = %d \
-group by customer_name, customer_address, type \
-order by customer_name, customer_address, type;";
+where customer_name = \"%s\" and year(package.registration_time) = %d and month(package.registration_time) = %d \
+group by customer_name, customer_address, type_ \
+order by customer_name, customer_address, type_;";
 
 const char* query5_3 =
-"select package.customer_address, package_id, content, fee, type_, pay_contract.payment_type, timeliness\
+"select package.customer_address, package_id, content, fee, type_, pay_contract.payment_type, timeliness \
+from package, pay_contract \
 where pay_contract.customer_name = package.customer_name and \
-	  pay_contract.customer_address = package.customer_address \
-      pay_contract.shipper_id = package.shipper_id \
-      customer_name = %s and year(package.registration_time) = %d and month(package.registration_time) = %d \
-from package, pay_contract\
+	  pay_contract.customer_address = package.customer_address and \
+      pay_contract.shipper_id = package.shipper_id  and \
+      package.customer_name = \"%s\" and year(package.registration_time) = %d and month(package.registration_time) = %d \
 order by package.customer_address;";
 
 char* find_truck = 
@@ -207,7 +208,7 @@ void start_conversation()
 
 void type1_conversation()
 {
-	int input;
+	int input, vehicle_id;
 	MYSQL_ROW sql_row = NULL;
 	MYSQL_RES* sql_result = NULL;
 	char buffer[200];
@@ -225,7 +226,7 @@ void type1_conversation()
 			return;
 
 		sql_result = send_query(buffer);
-
+		vehicle_id = input;
 		// 트럭이 파괴되지 않았으면
 		if (mysql_fetch_row(sql_result) == NULL)
 		{
@@ -236,38 +237,53 @@ void type1_conversation()
 		else 
 		{
 			mysql_free_result(sql_result);
-			printf("----- Subtypes in Type I -----\n");
-			printf("\t1. TYPE I-1.\n");
-			printf("\t2. TYPE I-2.\n");
-			printf("\t3. TYPE I-3.\n");
-			scanf("%d", &input);
-			switch (input)
-			{
-			case 1:
-				type1_1_conversation();
-				break;
-			case 2:
-				type1_2_conversation();
-				break;
-			case 3:
-				type1_3_conversation();
-				break;
-			default:
-				printf("Wrong Input\n");
-				break;
-			}
+			subtype1_conversation(vehicle_id);
 		}
 	}
 }
 
-void type1_1_conversation()
+void subtype1_conversation(int vehicle_id)
 {
+	int input;
+	while (true)
+	{
+		printf("----- Subtypes in Type I -----\n");
+		printf("\t1. TYPE I-1.\n");
+		printf("\t2. TYPE I-2.\n");
+		printf("\t3. TYPE I-3.\n");
+		printf("Which type of query?");
+		scanf("%d", &input);
+		switch (input)
+		{
+		case 1:
+			type1_1_conversation(vehicle_id);
+			break;
+		case 2:
+			type1_2_conversation(vehicle_id);
+			break;
+		case 3:
+			type1_3_conversation(vehicle_id);
+			break;
+		case 0:
+			return;
+		default:
+			printf("Wrong Input\n");
+			break;
+		}
+	}
+}
+
+void type1_1_conversation(int vehicle_id)
+{
+	char buffer[1000];
 	printf("----- Type I-1 -----\n");
 	printf("** Find all customers who had a package on the truck at the time of the crash. **\n");
 	MYSQL_ROW sql_row = NULL;
 	MYSQL_RES* sql_result = NULL;
 
-	sql_result = send_query(query1_1);
+	sprintf(buffer, query1_1, vehicle_id);
+
+	sql_result = send_query(buffer);
 
 	printf("Customer Name : ");
 
@@ -283,14 +299,17 @@ void type1_1_conversation()
 }
 
 
-void type1_2_conversation()
+void type1_2_conversation(int vehicle_id)
 {
+	char buffer[1000];
 	printf("----- Type I-2 -----\n");
 	printf("** Find all recipients who had a package on that truck at the time of the crash.  **\n");
 	MYSQL_ROW sql_row = NULL;
 	MYSQL_RES* sql_result = NULL;
 
-	sql_result = send_query(query1_2);
+
+	sprintf(buffer, query1_2, vehicle_id);
+	sql_result = send_query(buffer);
 
 	printf("Recipients : ");
 
@@ -305,14 +324,17 @@ void type1_2_conversation()
 	return;
 }
 
-void type1_3_conversation()
+void type1_3_conversation(int vehicle_id)
 {
+	char buffer[1000];
 	printf("----- Type I-3 -----\n");
 	printf("** Find the last successful delivery by that truck prior to the crash.   **\n");
 	MYSQL_ROW sql_row = NULL;
 	MYSQL_RES* sql_result = NULL;
 
-	sql_result = send_query(query1_2);
+	sprintf(buffer, query1_3, vehicle_id);
+
+	sql_result = send_query(buffer);
 
 	printf("(pacakge_id, departure_time) : ");
 
@@ -436,38 +458,38 @@ void type5_conversation()
 	scanf("%d-%d", &year, &month);
 
 	// simple bill
-	sprintf(buffer, query5_1, name,month,year);
+	sprintf(buffer, query5_1, name, year,month);
 
 	sql_result = send_query(buffer);
 
 	printf("--- name, address, total_fee ---\n");
 	while ((sql_row = mysql_fetch_row(sql_result)) != NULL)
 	{
-		printf("%s, %s, %s", sql_row[0], sql_row[1], sql_row[2]);
+		printf("%s, %s, %s\n", sql_row[0], sql_row[1], sql_row[2]);
 	}
 	mysql_free_result(sql_result);
 	printf("\n\n");
 
 	// A bill listing charges by type of service.
-	sprintf(buffer, query5_2, name, month, year);
+	sprintf(buffer, query5_2, name, year, month);
 
 	sql_result = send_query(buffer);
 	printf("--- name, address, type, total_fee ---\n");
 	while ((sql_row = mysql_fetch_row(sql_result)) != NULL)
 	{
-		printf("%s, %s, %s, %s", sql_row[0], sql_row[1], sql_row[2], sql_row[3]);
+		printf("%s, %s, %s, %s\n", sql_row[0], sql_row[1], sql_row[2], sql_row[3]);
 	}
 	mysql_free_result(sql_result);
 	printf("\n\n");
 
 	// An itemize billing listing each individual shipment and the charges for it. 
-	sprintf(buffer, query5_3, name, month, year);
+	sprintf(buffer, query5_3, name, year, month);
 
 	sql_result = send_query(buffer);
 	printf("--- address,package_id, content, fee, service_type, pay_type,timeliness ---\n");
 	while ((sql_row = mysql_fetch_row(sql_result)) != NULL)
 	{
-		printf("%s, %s, %s, %s, %s, %s, %s, %s, %s", sql_row[0], sql_row[1], sql_row[2], sql_row[3], sql_row[4], sql_row[5], sql_row[6], sql_row[7]);
+		printf("%s, %s, %s, %s, %s, %s, %s\n", sql_row[0], sql_row[1], sql_row[2], sql_row[3], sql_row[4], sql_row[5], sql_row[6]);
 	}
 	mysql_free_result(sql_result);
 	printf("\n\n");
