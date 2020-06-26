@@ -24,6 +24,10 @@ void type4_conversation();
 void type5_conversation();
 
 
+char* find_truck =
+" select vehicle_id,state from vehicle where vehicle_id = %d and state=\"destroyed\";";
+
+
 const char* query1_1 =
 "SELECT distinct package.customer_name, package.customer_address \
 FROM package, tracking_info \
@@ -94,9 +98,6 @@ where pay_contract.customer_name = package.customer_name and \
       package.customer_name = \"%s\" and year(package.registration_time) = %d and month(package.registration_time) = %d \
 order by package.customer_address;";
 
-char* find_truck = 
-" select vehicle_id,state from vehicle where vehicle_id = %d and state=\"destroyed\";";
-
 
 int main(void) {
 
@@ -111,7 +112,6 @@ int main(void) {
 		printf("%d ERROR : %s\n", mysql_errno(&conn), mysql_error(&conn));
 		return 1;
 	}
-
 	else
 	{
 		printf("Connection Succeed\n");
@@ -136,7 +136,6 @@ int main(void) {
 MYSQL_RES* send_query(char* query)
 {
 	MYSQL_RES* sql_result = NULL;
-	MYSQL_ROW sql_row = NULL;
 	int state = 0;
 	int field_count,i;
 
@@ -146,17 +145,6 @@ MYSQL_RES* send_query(char* query)
 	if (state == 0)
 	{
 		sql_result = mysql_store_result(connection);
-		/*		
-		field_count = mysql_num_fields(sql_result);
-
-		while ((sql_row = mysql_fetch_row(sql_result)) != NULL)
-		{
-			for (i = 0; i < field_count; i++)
-				printf("%s ", sql_row[i]);
-			printf("\n");
-		}
-		mysql_free_result(sql_result);
-		*/
 	}
 
 	return sql_result;
